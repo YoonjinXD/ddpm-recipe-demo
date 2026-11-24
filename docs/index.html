@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDPM Recipe Demo</title>
+<meta name="description" content="Interactive 3D MNIST demo: what each DDPM design choice does, and how flow matching relates.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="css/style.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <nav class="tabs" aria-label="Parts">
+      <a href="#ddpm" data-part="ddpm">Part 1 · DDPM</a>
+      <a href="#flow" data-part="flow">Part 2 · Flow matching</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ============================================================= PART 1 -->
+<section class="part" id="part-ddpm" data-part="ddpm">
+  <div class="hero">
+    <p class="eyebrow">Part 1 · Denoising Diffusion Probabilistic Models (Ho, Jain &amp; Abbeel, 2020)</p>
+    <h1>A DDPM is three recipes</h1>
+    <div class="recipe-cards">
+      <a class="rcard c1" href="#target"><span class="rt">1. Target</span><b>what to predict</b><span>noise <i>ε</i>, image <i>x</i><sub>0</sub>, or <i>v</i></span></a>
+      <a class="rcard c2" href="#schedule"><span class="rt">2. Schedule</span><b>how much noise at each step</b><span>linear, cosine, sigmoid</span></a>
+      <a class="rcard c3" href="#sampler"><span class="rt">3. Sampler</span><b>how to generate a sample using those predictions</b><span>random steps (SDE) or deterministic steps (ODE)</span></a>
+    </div>
+    <p class="lead">Change one recipe and you get a different model: DDIM, v-prediction, new schedules and even flow matching are new combinations of the same three.
+      Every picture and number below comes from small networks actually trained on MNIST.</p>
+  </div>
+
+  <div class="block" id="image">
+    <h2>An image is just 784 numbers</h2>
+    <p class="lead">An MNIST digit is 28 × 28 pixels. DDPM rescales every pixel to [−1, 1] (black = −1, white = +1).
+      Draw each pixel as a bar with its value on top, and the image becomes a landscape. Drag to rotate.</p>
+    <div class="hero3d">
+      <div class="canvas3d tall" id="hero-canvas"></div>
+      <aside class="hero-side">
+        <div class="thumb-big"><canvas id="hero-thumb" width="28" height="28"></canvas></div>
+        <p class="small">The same picture, as pixels.</p>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ---------------------------------------------------------------- recipe 1 -->
+  <div class="block recipe-block c1" id="target">
+    <div class="recipe-head c1"><span class="rt">1. Target</span><b>what to predict</b></div>
+    <p class="lead">Training mixes noise into a clean image and asks the network for something. DDPM asks for the noise <i>ε</i>;
+      you could also ask for the clean image <i>x</i><sub>0</sub>, or a mix of both, <i>v</i>. Whatever it predicts, the other two follow by algebra.</p>
+    <div class="pick"><div class="seg" id="pick-target"></div><span class="ctx" id="ctx-target"></span></div>
+    <div class="formula" id="train-formula-ddpm"></div>
+    <div class="slider-row">
+      <label for="train-t-ddpm">noise level <i>t</i></label>
+      <input type="range" id="train-t-ddpm" min="0" max="10" step="1" value="1">
+      <output id="train-t-out-ddpm"></output>
+    </div>
+    <div class="canvas3d" id="train-canvas-ddpm"><div class="labels3d"></div></div>
+    <div class="under3d" id="train-under-ddpm"></div>
+    <details class="code-details" open>
+      <summary>Algorithm 1 in code: the highlighted line is the only one that changes</summary>
+      <pre class="code" id="train-code-ddpm"></pre>
+    </details>
+    <div class="cards one"><div class="card" id="card-err-ddpm"></div></div>
+  </div>
+
+  <!-- ---------------------------------------------------------------- recipe 2 -->
+  <div class="block recipe-block c2" id="schedule">
+    <div class="recipe-head c2"><span class="rt">2. Schedule</span><b>how much noise at each step</b></div>
+    <p class="lead">The schedule decides how much of the image is left at each noise level <i>t</i>. Same digit, same noise, three schedules:
+      slide <i>t</i> and watch how quickly each one buries the 7.</p>
+    <div class="pick"><div class="seg" id="pick-sched"></div><span class="ctx" id="ctx-sched"></span></div>
+    <div class="slider-row">
+      <label for="sched-t">noise level <i>t</i></label>
+      <input type="range" id="sched-t" min="0" max="10" step="1" value="5">
+      <output id="sched-t-out"></output>
+    </div>
+    <div class="canvas3d" id="sched-canvas"><div class="labels3d"></div></div>
+    <div class="cards one"><div class="card" id="card-sched-ddpm"></div></div>
+  </div>
+
+  <!-- ---------------------------------------------------------------- recipe 3 -->
+  <div class="block recipe-block c3" id="sampler">
+    <div class="recipe-head c3"><span class="rt">3. Sampler</span><b>how to generate a sample using those predictions</b></div>
+    <p class="lead">Start from pure Gaussian noise and walk back to an image. DDPM adds fresh noise at every one of its 1000 steps (an SDE);
+      DDIM takes the same trained network along a deterministic path (an ODE), so it can skip most steps.</p>
+    <div class="pick"><div class="seg" id="pick-sampler"></div><span class="ctx" id="ctx-sampler"></span></div>
+    <div class="formula" id="sample-formula-ddpm"></div>
+    <div class="slider-row">
+      <button class="play" id="play-ddpm" aria-label="Play">▶</button>
+      <label for="sample-f-ddpm">step</label>
+      <input type="range" id="sample-f-ddpm" min="0" max="10" step="1" value="0">
+      <output id="sample-f-out-ddpm"></output>
+      <div class="seg small-seg" id="seeds-ddpm"></div>
+    </div>
+    <div class="canvas3d" id="sample-canvas-ddpm"><div class="labels3d"></div></div>
+    <div class="filmstrip" id="film-ddpm"></div>
+    <div class="cards one"><div class="card" id="card-samples-ddpm"></div></div>
+  </div>
+
+  <div class="block" id="mix">
+    <h2>Mix the recipes</h2>
+    <div class="cards one"><div class="card" id="card-refs-ddpm"></div></div>
+  </div>
+</section>
+
+<!-- ============================================================= PART 2 -->
+<section class="part" id="part-flow" data-part="flow" hidden>
+  <div class="hero">
+    <p class="eyebrow">Part 2 · Flow matching (Lipman et al., 2023) and rectified flow (Liu et al., 2023)</p>
+    <h1>Flow matching is the same three recipes</h1>
+    <div class="recipe-cards">
+      <a class="rcard c1" href="#f-target"><span class="rt">1. Target</span><b>what to predict</b><span>the velocity <i>u</i> = <i>ε</i> − <i>x</i><sub>0</sub></span></a>
+      <a class="rcard c2" href="#f-schedule"><span class="rt">2. Schedule</span><b>how to mix image and noise</b><span>a straight line: nothing to tune</span></a>
+      <a class="rcard c3" href="#f-sampler"><span class="rt">3. Sampler</span><b>how to generate a sample</b><span>follow the velocity with a few Euler steps (ODE)</span></a>
+    </div>
+    <p class="lead">Diffusion starts from a process that destroys images and learns to undo it. Flow matching starts by drawing a path between noise and data,
+      usually a straight line, and learns the velocity to travel along it. Same network, same data, same training budget as Part 1: only the three recipes change.</p>
+    <p class="lead">Because the path is drawn by hand, its far end does not even have to be Gaussian noise: flow matching can carry one kind of image into another
+      (Liu et al., 2023; Albergo &amp; Vanden-Eijnden, 2023). Diffusion cannot, since its forward process always ends in noise.</p>
+    <div class="compare" id="compare-table"></div>
+  </div>
+
+  <!-- ---------------------------------------------------------------- recipe 1 -->
+  <div class="block recipe-block c1" id="f-target">
+    <div class="recipe-head c1"><span class="rt">1. Target</span><b>the velocity</b></div>
+    <p class="lead">Mix the 7 with noise, then ask the network which way every pixel has to move: the velocity <i>u</i> = <i>ε</i> − <i>x</i><sub>0</sub>.
+      It is a mix of noise and image, like Part 1’s <i>v</i>. Arrows show the network’s answer.</p>
+    <div class="pick"><span class="ctx" id="ctx2-target"></span></div>
+    <div class="formula" id="train-formula-flow"></div>
+    <div class="slider-row">
+      <label for="train-t-flow">time <i>t</i></label>
+      <input type="range" id="train-t-flow" min="0" max="10" step="1" value="3">
+      <output id="train-t-out-flow"></output>
+    </div>
+    <div class="canvas3d" id="train-canvas-flow"><div class="labels3d"></div></div>
+    <div class="under3d" id="train-under-flow"></div>
+    <details class="code-details" open>
+      <summary>The training loop in code: the highlighted lines differ from Part 1</summary>
+      <pre class="code" id="train-code-flow"></pre>
+    </details>
+    <div class="cards one"><div class="card" id="card-err-flow"></div></div>
+  </div>
+
+  <!-- ---------------------------------------------------------------- recipe 2 -->
+  <div class="block recipe-block c2" id="f-schedule">
+    <div class="recipe-head c2"><span class="rt">2. Schedule</span><b>a straight line between image and noise</b></div>
+    <p class="lead">Flow matching has no noise schedule to choose: <i>x<sub>t</sub></i> = (1 − <i>t</i>) <i>x</i><sub>0</sub> + <i>t ε</i> slides straight from the image to the noise.
+      Compare it with the curved path of Part 1’s cosine schedule: slide <i>t</i> and watch both bury the 7.</p>
+    <div class="pick"><div class="seg" id="pick2-path"></div><span class="ctx" id="ctx2-path"></span></div>
+    <div class="slider-row">
+      <label for="sched-t-flow">time <i>t</i></label>
+      <input type="range" id="sched-t-flow" min="0" max="10" step="1" value="4">
+      <output id="sched-t-out-flow"></output>
+    </div>
+    <div class="canvas3d" id="sched-canvas-flow"><div class="labels3d"></div></div>
+    <div class="cards one"><div class="card" id="card-sched-flow"></div></div>
+  </div>
+
+  <!-- ---------------------------------------------------------------- recipe 3 -->
+  <div class="block recipe-block c3" id="f-sampler">
+    <div class="recipe-head c3"><span class="rt">3. Sampler</span><b>follow the arrows</b></div>
+    <p class="lead">Start from pure noise at <i>t</i> = 1 and repeat one line: move every pixel a small step along the predicted velocity (Euler’s method for an ODE).
+      You can also add fresh noise at each step, like DDPM: the sampler is a separate choice from the target and the path.</p>
+    <div class="pick"><div class="seg" id="pick2-sampler"></div><div class="seg small-seg" id="pick2-steps"></div><span class="ctx" id="ctx2-sampler"></span></div>
+    <div class="formula" id="sample-formula-flow"></div>
+    <div class="slider-row">
+      <button class="play" id="play-flow" aria-label="Play">▶</button>
+      <label for="sample-f-flow">step</label>
+      <input type="range" id="sample-f-flow" min="0" max="10" step="1" value="0">
+      <output id="sample-f-out-flow"></output>
+      <div class="seg small-seg" id="seeds-flow"></div>
+    </div>
+    <div class="canvas3d" id="sample-canvas-flow"><div class="labels3d"></div></div>
+    <div class="filmstrip" id="film-flow"></div>
+    <div class="cards one"><div class="card" id="card-samples-flow"></div></div>
+  </div>
+
+  <div class="block" id="meet-block">
+    <h2>Where the two meet</h2>
+    <div class="meet" id="meet"></div>
+    <h3 class="sub">A short family tree</h3>
+    <div class="tree" id="tree"></div>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div id="biblio"></div>
+  <p class="small">Models: one 3.1M-parameter UNet per configuration, each trained from scratch for 20,000 Adam steps (batch 128, EMA 0.9995) on MNIST. Code: <code>train.py</code> and <code>diffusion_knobs/</code> in this repository.
+    Scores: FID-style distance in the feature space of a small MNIST classifier (lower is better) and the share of samples it labels with ≥ 90% confidence,
+    both on 1,000 samples drawn from the same starting noise for every configuration. Flow matching here uses <i>t</i> = 1 for noise, like diffusion and Stable Diffusion 3;
+    Lipman et al. use the reverse convention.</p>
+</footer>
+
+<div class="loading" id="loading">Loading models’ outputs…</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
