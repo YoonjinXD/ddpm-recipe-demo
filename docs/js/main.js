@@ -282,7 +282,7 @@ function renderSchedChart1() {
 function renderErrChart1() {
   const el = $('#card-err-ddpm');
   const mode = S1.err, col = mode === 'x0' ? 2 : 3;
-  const series = ['eps', 'x0', 'v'].map(tg => {
+  const series = ['eps', 'x0'].map(tg => {
     const rows = M.p1.models[`${S1.sched}-${tg}`].loss_by_t;
     const on = tg === S1.target;
     return { id: tg, label: `predict ${TL[tg]}`, color: COL[tg], width: on ? 3 : 1.6, opacity: on ? 1 : 0.55, pts: rows.map(r => [r[0], r[col]]) };
@@ -293,9 +293,8 @@ function renderErrChart1() {
   const take = {
     eps: `ε-prediction is accurate when there is little noise, but turning its guess into a clean image divides by <i>a<sub>t</sub></i>. At <i>t</i> = <i>T</i> (${SCHED_NAME[S1.sched]}, <i>a<sub>T</sub></i> = ${fmtNum(M.common.schedules[S1.sched].a[1000])}) its clean-image error is <b>${fmtNum(M.p1.models[`${S1.sched}-eps`].loss_by_t.at(-1)[2])}</b>, against ${fmtNum(M.common.baseline.mean_digit_mse)} for just guessing the average digit. Switch the schedule to cosine or sigmoid to see it explode.`,
     x0: `x₀-prediction is the mirror image: its noise guess divides by <i>s<sub>t</sub></i>, which is ≈ 0 at <i>t</i> = 1. There its noise error is <b>${fmtNum(M.p1.models[`${S1.sched}-x0`].loss_by_t[0][3])}</b>, against ${fmtNum(M.p1.models[`${S1.sched}-eps`].loss_by_t[0][3])} for ε-prediction (see the noise view). DDPM §3.2 found its samples worse.`,
-    v: '<i>v</i> never divides by something near zero, so both of its derived guesses stay reasonable from one end to the other.',
   }[S1.target];
-  el.innerHTML = `<h3>${rt(1, 'what the network predicts')}</h3><p class="sub">Average error at every noise level, measured on 1000 test digits (log scale). All three networks were trained with the ${SCHED_NAME[S1.sched]} schedule.</p>
+  el.innerHTML = `<h3>${rt(1, 'what the network predicts')}</h3><p class="sub">Average error at every noise level, measured on 1000 test digits (log scale). Both networks were trained with the ${SCHED_NAME[S1.sched]} schedule.</p>
     <div class="seg small-seg" style="margin-bottom:6px"><button data-m="x0" class="${mode === 'x0' ? 'on' : ''}">error of the clean-image guess <i>x̂</i><sub>0</sub></button><button data-m="eps" class="${mode === 'eps' ? 'on' : ''}">error of the noise guess <i>ε̂</i></button></div>
     ${legendHTML(series.map(s => ({ label: s.label, color: s.color, opacity: s.opacity })).concat([{ label: refs[0].label, color: COL.muted, dash: true }]))}
     <div class="chart-slot"></div><p class="take">${take}</p>`;
@@ -308,11 +307,11 @@ function renderErrChart1() {
 function overviewTable1() {
   const cl = clipKey();
   const cells = [];
-  for (const tg of ['eps', 'x0', 'v']) for (const sc of ['linear', 'cosine', 'sigmoid']) cells.push(M.p1.runs[`${sc}-${tg}|${S1.sampler}|${cl}`].fid);
+  for (const tg of ['eps', 'x0']) for (const sc of ['linear', 'cosine', 'sigmoid']) cells.push(M.p1.runs[`${sc}-${tg}|${S1.sampler}|${cl}`].fid);
   const fin = cells.filter(v => v !== null && Number.isFinite(v)).map(v => Math.log(v));
   const lo = Math.min(...fin), hi = Math.max(...fin);
   let h = `<table class="overview"><tr><th></th>${['linear', 'cosine', 'sigmoid'].map(s => `<th>${SCHED_NAME[s]}</th>`).join('')}</tr>`;
-  for (const tg of ['eps', 'x0', 'v']) {
+  for (const tg of ['eps', 'x0']) {
     h += `<tr><th>predict ${TL[tg]}</th>`;
     for (const sc of ['linear', 'cosine', 'sigmoid']) {
       const r = M.p1.runs[`${sc}-${tg}|${S1.sampler}|${cl}`], on = tg === S1.target && sc === S1.sched;
@@ -335,7 +334,7 @@ function renderSamples1() {
       <div class="stat"><div class="k">look like a digit</div><div class="v ${r.digit_rate < 0.5 ? 'bad' : ''}">${pct(r.digit_rate)}</div></div>
       <div class="stat"><div class="k">FID-style distance ↓</div><div class="v ${r.fid === null || r.fid > 50 ? 'bad' : ''}">${fidTxt(r.fid)}</div></div>
       <div class="stat"><div class="k">network calls</div><div class="v">${calls}</div></div></div>
-      <p class="sub" style="margin:0 0 6px">FID-style distance for all nine (target × schedule) networks with the same sampler. Darker is better; click a cell to switch.</p>
+      <p class="sub" style="margin:0 0 6px">FID-style distance for all six (target × schedule) networks with the same sampler. Darker is better; click a cell to switch.</p>
       ${overviewTable1()}
     </div></div>`;
   $$('td[data-t]', el).forEach(td => td.addEventListener('click', () => setState(1, { target: td.dataset.t, sched: td.dataset.s })));
@@ -428,7 +427,7 @@ function renderErrChart2() {
   const fm = M.p2.models['fm-gauss'].loss_by_t, cv = M.p1.models['cosine-v'].loss_by_t, ce = M.p1.models['cosine-eps'].loss_by_t;
   const series = [
     { id: 'fm', label: 'flow matching: predict u (straight)', color: COL.flow, rows: fm, on: S2.path === 'straight' },
-    { id: 'cv', label: 'Part 1: predict v (cosine)', color: COL.v, rows: cv, on: S2.path === 'curved' },
+    { id: 'cv', label: 'curved: predict v (cosine)', color: COL.v, rows: cv, on: S2.path === 'curved' },
     { id: 'ce', label: 'Part 1: predict ε (cosine)', color: COL.eps, rows: ce, on: false },
   ].map(s => ({ id: s.id, label: s.label, color: s.color, width: s.on ? 3 : 1.6, opacity: s.on ? 1 : 0.55, pts: s.rows.map((r, i) => [L[i] / 1000, r[2]]) }));
   const vals = series.flatMap(s => s.pts.map(p => p[1])).filter(v => v !== null && Number.isFinite(v) && v > 0);

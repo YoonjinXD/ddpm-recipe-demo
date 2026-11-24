@@ -32,7 +32,7 @@
     <p class="eyebrow">Part 1 · Denoising Diffusion Probabilistic Models (Ho, Jain &amp; Abbeel, 2020)</p>
     <h1>A DDPM is three recipes</h1>
     <div class="recipe-cards">
-      <a class="rcard c1" href="#target"><span class="rt">1. Target</span><b>what to predict</b><span>noise <i>ε</i>, image <i>x</i><sub>0</sub>, or <i>v</i></span></a>
+      <a class="rcard c1" href="#target"><span class="rt">1. Target</span><b>what to predict</b><span>noise <i>ε</i> or image <i>x</i><sub>0</sub></span></a>
       <a class="rcard c2" href="#schedule"><span class="rt">2. Schedule</span><b>how much noise at each step</b><span>linear, cosine, sigmoid</span></a>
       <a class="rcard c3" href="#sampler"><span class="rt">3. Sampler</span><b>how to generate a sample using those predictions</b><span>random steps (SDE) or deterministic steps (ODE)</span></a>
     </div>
@@ -57,7 +57,7 @@
   <div class="block recipe-block c1" id="target">
     <div class="recipe-head c1"><span class="rt">1. Target</span><b>what to predict</b></div>
     <p class="lead">Training mixes noise into a clean image and asks the network for something. DDPM asks for the noise <i>ε</i>;
-      you could also ask for the clean image <i>x</i><sub>0</sub>, or a mix of both, <i>v</i>. Whatever it predicts, the other two follow by algebra.</p>
+      you could also ask for the clean image <i>x</i><sub>0</sub>. Whichever it predicts, the other follows by algebra.</p>
     <div class="pick"><div class="seg" id="pick-target"></div><span class="ctx" id="ctx-target"></span></div>
     <div class="formula" id="train-formula-ddpm"></div>
     <div class="slider-row">
@@ -135,7 +135,7 @@
   <div class="block recipe-block c1" id="f-target">
     <div class="recipe-head c1"><span class="rt">1. Target</span><b>the velocity</b></div>
     <p class="lead">Mix the 7 with noise, then ask the network which way every pixel has to move: the velocity <i>u</i> = <i>ε</i> − <i>x</i><sub>0</sub>.
-      It is a mix of noise and image, like Part 1’s <i>v</i>. Arrows show the network’s answer.</p>
+      It is a mix of noise and image. Arrows show the network’s answer.</p>
     <div class="pick"><span class="ctx" id="ctx2-target"></span></div>
     <div class="formula" id="train-formula-flow"></div>
     <div class="slider-row">

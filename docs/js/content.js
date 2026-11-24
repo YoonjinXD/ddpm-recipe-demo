@@ -50,7 +50,6 @@ export const P1_RECIPES = [
   { key: 'target', label: 'Target', opts: [
     { v: 'eps', html: 'noise <i>ε</i>' },
     { v: 'x0', html: 'image <i>x</i><sub>0</sub>' },
-    { v: 'v', html: 'mix <i>v</i>' },
   ] },
   { key: 'sched', label: 'Schedule', opts: [
     { v: 'linear', html: 'linear' },
@@ -103,7 +102,7 @@ export function p2Code(s) {
 
 // ------------------------------------------------------------------ Part 2 static text
 export const COMPARE = [
-  ['Target', 'the noise <i>ε</i> (or <i>x</i><sub>0</sub>, or <i>v</i>)', 'the velocity <i>u</i> = <i>ε</i> − <i>x</i><sub>0</sub>'],
+  ['Target', 'the noise <i>ε</i> (or <i>x</i><sub>0</sub>)', 'the velocity <i>u</i> = <i>ε</i> − <i>x</i><sub>0</sub>'],
   ['Schedule', '<i>x<sub>t</sub></i> = <i>a<sub>t</sub> x</i><sub>0</sub> + <i>s<sub>t</sub> ε</i>, a curve set by the schedule', '<i>x<sub>t</sub></i> = (1 − <i>t</i>) <i>x</i><sub>0</sub> + <i>t ε</i>, a straight line'],
   ['Sampler', '1000 random steps (DDPM), or DDIM', 'Euler: <i>x</i> ← <i>x</i> − Δ<i>t</i> · <i>û</i>, a few steps'],
 ];
@@ -113,7 +112,7 @@ export function meetCards() {
     ['DDIM on a straight line is Euler',
       `Put <i>a<sub>t</sub></i> = 1 − <i>t</i>, <i>s<sub>t</sub></i> = <i>t</i> into the DDIM update <i>x<sub>t′</sub></i> = <i>a<sub>t′</sub> x̂</i><sub>0</sub> + <i>s<sub>t′</sub> ε̂</i> and it becomes <i>x<sub>t</sub></i> − (<i>t</i> − <i>t′</i>) <i>û</i>: one Euler step. The “complicated coefficients” were the schedule. (${cite('gao2024')})`],
     ['v-prediction is a velocity',
-      `On the cosine path <i>x</i> = cos φ · <i>x</i><sub>0</sub> + sin φ · <i>ε</i>, the derivative d<i>x</i>/dφ is exactly <i>v</i> = cos φ · <i>ε</i> − sin φ · <i>x</i><sub>0</sub>. Part 1’s v-model is a flow model on a curved path. (${cite('salimans2022')})`],
+      `On the cosine path <i>x</i> = cos φ · <i>x</i><sub>0</sub> + sin φ · <i>ε</i>, the derivative d<i>x</i>/dφ is exactly <i>v</i> = cos φ · <i>ε</i> − sin φ · <i>x</i><sub>0</sub>. A v-prediction network is a flow model on a curved path, which is why it is the curved path in recipe 2. (${cite('salimans2022')})`],
     ['The sampler is its own choice',
       `Diffusion models can be sampled without randomness (DDIM, the probability-flow ODE of ${cite('song2021sde')}), and flow models can be sampled with it (${cite('ma2024')}). Try the “stochastic” sampler in recipe 3.`],
   ];
@@ -134,9 +133,9 @@ export const FAMOUS = [
   { name: 'Stable Diffusion 1', ref: 'rombach2022', predicts: 'ε', sched: 'scaled linear β', start: '<i>N</i>(0, I) in a latent space', sampler: 'DDIM / PLMS, ~50 steps',
     go: { part: 1, target: 'eps', sched: 'linear', sampler: 'ddim50' } },
   { name: 'Stable Diffusion 2 (768-v)', ref: null, predicts: 'v', sched: 'scaled linear β', start: '<i>N</i>(0, I) in a latent space', sampler: 'DDIM-family, ~50 steps',
-    go: { part: 1, target: 'v', sched: 'linear', sampler: 'ddim50' } },
+    go: null },
   { name: 'Stable Audio', audio: true, ref: 'evans2024', predicts: 'v', sched: 'cosine, continuous time', start: '<i>N</i>(0, I) in a latent space', sampler: 'DPM-Solver++, 100 steps',
-    go: { part: 1, target: 'v', sched: 'cosine', sampler: 'ddim50' } },
+    go: null },
   { name: 'Stable Diffusion 3', ref: 'esser2024', predicts: 'velocity', sched: 'straight line (rectified flow)', start: '<i>N</i>(0, I) in a latent space', sampler: 'Euler, ~28 steps',
     go: { part: 2, path: 'straight', sampler: 'euler', steps: 10 } },
   { name: 'Matcha-TTS', audio: true, ref: 'mehta2024', predicts: 'velocity', sched: 'straight line (OT-CFM)', start: '<i>N</i>(0, I)', sampler: 'Euler, 2–10 steps',
